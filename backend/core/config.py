@@ -7,9 +7,7 @@ from backend.core import env
 class Config:
     """Odoo DB credentials and RAG pipeline settings."""
 
-    # Auth / Odoo DB
-    SECRET_KEY = os.getenv('SECRET_KEY')
-
+    # Odoo DB (login auth)
     DB_HOST = os.getenv('DB_HOST')
     DB_PORT = int(os.getenv('DB_PORT', '5432'))
     DB_NAME = os.getenv('DB_NAME', '')
