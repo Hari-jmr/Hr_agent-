@@ -43,6 +43,10 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "python-json-logger>=2.0.7",
     "requests>=2.32.0",
+    "passlib==1.7.4",
+    "itsdangerous==2.2.0",
+    "python-multipart==0.0.12",
+    "asyncpg>=0.30",
 ]
 
 [project.optional-dependencies]
