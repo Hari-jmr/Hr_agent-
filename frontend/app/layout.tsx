@@ -1,27 +1,19 @@
-import type { Metadata } from 'next';
-import { IBM_Plex_Mono, Manrope } from 'next/font/google';
-import './globals.css';
-
-const manrope = Manrope({
-  subsets: ['latin'],
-  variable: '--font-sans',
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
-});
+﻿import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'JMR HR Portal',
-  description: 'JMR HR Portal - Employee Sign In',
+  title: "HR Agent Bot",
+  description: "HR Policy Agent Chat Interface powered by OpenRouter + pgvector RAG",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en">
-      <body className={`${manrope.variable} ${ibmPlexMono.variable}`}>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }
