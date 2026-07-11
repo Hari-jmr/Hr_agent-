@@ -531,7 +531,7 @@ export default function ChatPage() {
               persistMessages(updated);
             } else if (data.type === 'end') {
               const final = streamingMessages.map((msg) =>
-                msg.id === assistantMessageId ? { ...msg, isStreaming: false, citations } : msg
+                msg.id === assistantMessageId ? { ...msg, content: assistantContent, isStreaming: false, citations } : msg
               );
               persistMessages(final);
             }
