@@ -1,9 +1,16 @@
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from typing import Optional, List
-import os
 import json
+import os
+import sys
+
+# Ensure project root is on sys.path so "backend.*" imports work
+_project_root = str(Path(__file__).resolve().parent.parent)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,7 +18,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.sessions import SessionMiddleware
-from dotenv import load_dotenv
 
 import httpx
 from sqlalchemy import create_engine, Column, String, DateTime, Integer, Text, Float, Boolean, text
@@ -21,34 +27,12 @@ from pgvector.sqlalchemy import Vector
 import numpy as np
 
 from backend.api.router import api_router
+from backend.core.config import config
 from backend.core.settings import settings
 from backend.schemas.common import ErrorDetail, ErrorResponse, StatusResponse
 
-load_dotenv()
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-
-class Config:
-    """Application configuration"""
-    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-    OPENROUTER_LLM_MODEL = os.getenv("OPENROUTER_LLM_MODEL", "anthropic/claude-3-5-sonnet")
-    OPENROUTER_EMBED_MODEL = os.getenv("OPENROUTER_EMBED_MODEL", "openai/text-embedding-3-small")
-
-    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:secure_password@localhost:5433/hr_agent")
-
-    CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 512))
-    CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 64))
-    TOP_K_RETRIEVAL = int(os.getenv("TOP_K_RETRIEVAL", 5))
-    SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.7))
-
-    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000").split(",")
-
-config = Config()
 
 # ============================================================================
 # DATABASE SETUP
