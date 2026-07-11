@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Large / generated files
+pdfs/
+*.pdf
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+dist-test/
+.next/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE / project scaffold
+.idea/
+.vscode/
+idea/
+*.swp
+
+# Markdown (docs, notes, scratch)
+*.md
+
+# TypeScript build artifacts
+*.tsbuildinfo
+next-env.d.ts
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temp
+tmp/
+temp/
+*.bak

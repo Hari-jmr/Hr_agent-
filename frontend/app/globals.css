@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@200;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.147 0.004 49.25);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.147 0.004 49.25);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.147 0.004 49.25);
+  --color-primary: oklch(0.541 0.281 293.009);
+  --color-primary-foreground: oklch(0.969 0.016 293.756);
+  --color-secondary: oklch(0.967 0.001 286.375);
+  --color-secondary-foreground: oklch(0.21 0.006 285.885);
+  --color-muted: oklch(0.97 0.001 106.424);
+  --color-muted-foreground: oklch(0.446 0.013 58.071);
+  --color-accent: oklch(0.93 0.05 293);
+  --color-accent-foreground: oklch(0.3 0.15 293);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-border: oklch(0.923 0.003 48.717);
+  --color-input: oklch(0.923 0.003 48.717);
+  --color-ring: oklch(0.709 0.01 56.259);
+  --color-chart-1: oklch(0.811 0.111 293.571);
+  --color-chart-2: oklch(0.606 0.25 292.717);
+  --color-chart-3: oklch(0.541 0.281 293.009);
+  --color-chart-4: oklch(0.491 0.27 292.581);
+  --color-chart-5: oklch(0.432 0.232 292.759);
+
+  --font-sans: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
+
+  --radius-sm: calc(1rem - 4px);
+  --radius-md: calc(1rem - 2px);
+  --radius-lg: 1rem;
+  --radius-xl: calc(1rem + 4px);
+  --radius-2xl: calc(1rem + 8px);
+  --radius-3xl: calc(1rem + 12px);
+  --radius-4xl: calc(1rem + 16px);
+}
+
+@layer base {
+  html {
+    font-size: 90%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  ::selection {
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  scrollbar-width: none;
+}

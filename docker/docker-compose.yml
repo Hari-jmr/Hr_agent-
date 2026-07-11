@@ -1,0 +1,126 @@
+# docker/docker-compose.yml
+# HR Agent Bot - Docker Compose Configuration
+# Local development with PostgreSQL + pgvector backend
+
+services:
+  # ============================================================================
+  # PostgreSQL with pgvector
+  # ============================================================================
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: hr_agent_bot_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secure_password
+      POSTGRES_DB: hr_agent
+      # max_connections set via custom conf below
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d hr_agent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hr_agent_network
+
+  # ============================================================================
+  # FastAPI Backend
+  # ============================================================================
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: hr_agent_backend
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_LLM_MODEL: anthropic/claude-3-5-sonnet
+      OPENROUTER_EMBED_MODEL: openai/text-embedding-3-small
+      DATABASE_URL: postgresql://admin:secure_password@postgres:5432/hr_agent  # Internal Docker port stays 5432
+      DEBUG: "true"
+      WORKERS: 4
+      PORT: 8000
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app
+      - /app/__pycache__
+      - /tmp/hr_agent_uploads:/tmp
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hr_agent_network
+
+  # ============================================================================
+  # Redis (Optional - for caching)
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: hr_agent_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hr_agent_network
+
+  # ============================================================================
+  # Next.js Frontend (Optional in docker-compose)
+  # ============================================================================
+  # frontend:
+  #   build:
+  #     context: ../frontend
+  #     dockerfile: Dockerfile
+  #   container_name: hr_agent_frontend
+  #   environment:
+  #     NEXT_PUBLIC_API_URL: http://backend:8000
+  #     NEXT_PUBLIC_APP_NAME: HR Agent Bot
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
+  #   volumes:
+  #     - ../frontend:/app
+  #     - /app/.next
+  #     - /app/node_modules
+  #   command: npm run dev
+  #   networks:
+  #     - hr_agent_network
+
+  # ============================================================================
+  # PgAdmin (Optional - Database Admin GUI)
+  # ============================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: hr_agent_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@hragent.local
+      PGADMIN_DEFAULT_PASSWORD: pgadmin_password
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - hr_agent_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  hr_agent_network:
+    driver: bridge
