@@ -28,7 +28,6 @@ import numpy as np
 
 from backend.api.router import api_router
 from backend.core.config import config
-from backend.core.settings import settings
 from backend.schemas.common import ErrorDetail, ErrorResponse, StatusResponse
 
 logging.basicConfig(level=logging.INFO)
@@ -425,8 +424,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title=settings.APP_NAME,
-        version=settings.APP_VERSION,
+        title=config.APP_NAME,
+        version=config.APP_VERSION,
         docs_url='/docs',
         redoc_url='/redoc',
         lifespan=lifespan,
@@ -434,14 +433,14 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         SessionMiddleware,
-        secret_key=settings.SECRET_KEY,
+        secret_key=config.SECRET_KEY,
         same_site='lax',
         https_only=False,
     )
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.ALLOWED_ORIGINS,
+        allow_origins=config.ALLOWED_ORIGINS,
         allow_credentials=True,
         allow_methods=['GET', 'POST'],
         allow_headers=['*'],
@@ -657,7 +656,7 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "backend.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
+        host=config.HOST,
+        port=config.PORT,
         workers=int(os.getenv("WORKERS", 4))
     )
