@@ -585,7 +585,7 @@ export default function ChatPage() {
               <Bot className="size-7 text-primary" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">JMR HR Portal</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Sign in with your HRMS credentials</p>
+            <p className="mt-1 text-sm text-muted-foreground">Sign in with your Odoo credentials</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <input
