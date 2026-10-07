@@ -156,7 +156,7 @@ const AssistantMessage = ({ message, isStreaming }: { message: ChatMessage; isSt
         ) : null}
       </div>
 
-      {/* Citations / Sources */}
+      {/* Citations / Sources - hidden from UI for now; keep logic commented out
       {message.citations && message.citations.length > 0 && !isStreaming && (
         <div className="mt-3">
           <button
@@ -193,6 +193,7 @@ const AssistantMessage = ({ message, isStreaming }: { message: ChatMessage; isSt
           )}
         </div>
       )}
+      */}
 
       {/* Actions */}
       {!isStreaming && timestamp && (
