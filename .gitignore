@@ -23,8 +23,13 @@ dist-test/
 idea/
 *.swp
 
-# Markdown (docs, notes, scratch)
+# Markdown (scratch notes only - README and docs/ are tracked)
 *.md
+!README.md
+!docs/*.md
+
+# Office documents
+*.docx
 
 # TypeScript build artifacts
 *.tsbuildinfo

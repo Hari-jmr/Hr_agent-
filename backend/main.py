@@ -416,6 +416,11 @@ def _build_validation_details(errors: list[dict]) -> list[ErrorDetail]:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info('HR Agent API starting up')
+    try:
+        with engine.begin() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+    except Exception as exc:  # pragma: no cover - depends on DB privileges
+        logger.warning('Could not ensure pgvector extension: %s', exc)
     Base.metadata.create_all(bind=engine)
     logger.info("Database initialized")
     yield

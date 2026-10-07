@@ -6,12 +6,10 @@ const Button = React.forwardRef<
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: "default" | "outline" | "secondary" | "ghost" | "destructive" | "link";
     size?: "default" | "sm" | "lg" | "icon" | "icon-xs";
-    asChild?: boolean;
   }
->(({ className, variant = "default", size = "default", asChild = false, ...props }, ref) => {
-  const Comp = asChild ? React.Slot : "button";
+>(({ className, variant = "default", size = "default", ...props }, ref) => {
   return (
-    <Comp
+    <button
       ref={ref}
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",

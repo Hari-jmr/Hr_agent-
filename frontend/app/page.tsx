@@ -490,7 +490,7 @@ export default function ChatPage() {
         timestamp: m.timestamp,
       }));
 
-      const response = await fetch('http://localhost:8001/api/query', {
+      const response = await fetch('/backend/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -542,7 +542,7 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error('Error:', error);
-      const errorMessages = [
+      const errorMessages: ChatMessage[] = [
         ...nextMessages,
         {
           id: `msg_${Date.now()}`,
