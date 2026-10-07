@@ -88,12 +88,10 @@ Backend:
 
 ```bash
 cd backend
-python -m venv .venv
-.venv\Scripts\activate            # Windows
-pip install -r requirements.txt
-# .env is loaded from the repo root and backend/ automatically
-uvicorn main:app --reload --port 8001
+uv sync                           # creates .venv and installs all dependencies
+uv run uvicorn main:app --reload --port 8001
 ```
+`.env` is loaded from the repo root and `backend/` automatically.
 
 Frontend:
 

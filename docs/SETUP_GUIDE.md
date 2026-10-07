@@ -39,16 +39,8 @@ bash scripts/init-db.sh
 ```bash
 cd backend
 
-# Using UV (recommended)
-uv venv
-source .venv/bin/activate  # macOS/Linux
-# or
-.venv\Scripts\activate  # Windows
-
-uv pip install -r requirements.txt
-
-# OR using pip
-pip install -r requirements.txt
+# Using UV (recommended) - creates .venv and installs everything from pyproject.toml
+uv sync
 ```
 
 ### 3. Configure Environment
@@ -77,14 +69,11 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:8000
 ### 4. Run Backend Server
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Or with more workers
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8001
 ```
 
-✅ Backend running at: http://localhost:8000
-📚 API docs at: http://localhost:8000/docs
+✅ Backend running at: http://localhost:8001
+📚 API docs at: http://localhost:8001/docs
 
 ---
 
