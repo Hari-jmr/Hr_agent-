@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional, List
 import json
 import os
+import re
 import sys
 
 # Ensure project root is on sys.path so "backend.*" imports work
@@ -101,7 +102,7 @@ class ChatMessage(BaseModel):
 class QueryRequest(BaseModel):
     """User query request"""
     model_config = {"extra": "ignore"}
-    question: str = Field(..., min_length=5, max_length=1000)
+    question: str = Field(..., min_length=1, max_length=1000)
     conversation_history: Optional[List[ChatMessage]] = None
     session_id: Optional[str] = None
 
@@ -399,6 +400,44 @@ Retrieved Policy Excerpts:
 # APP FACTORY
 # ============================================================================
 
+_SMALL_TALK_PATTERNS = [
+    (
+        re.compile(r"^(hi+|hello+|hey+|yo|greetings|namaste|gm|good\s*(morning|afternoon|evening))[\s!.,?]*$", re.IGNORECASE),
+        "Hello! I'm the JMR HR Assistant. Ask me anything about HR policies - leave, benefits, travel, insurance and more.",
+    ),
+    (
+        re.compile(r"^(how\s*(are|r)\s*(you|u)|how are you doing|how's it going|whats up|what's up)[\s!.,?]*$", re.IGNORECASE),
+        "I'm doing well, thank you! How can I help you with HR policies today?",
+    ),
+    (
+        re.compile(r"^(thanks?|thank you|thx|ty|tysm)[\s!.,?]*$", re.IGNORECASE),
+        "You're welcome! Let me know if you have any other HR policy questions.",
+    ),
+    (
+        re.compile(r"^(bye+|goodbye|see you|see ya|cya)[\s!.,?]*$", re.IGNORECASE),
+        "Goodbye! Have a great day.",
+    ),
+    (
+        re.compile(r"^(ok|okay|k|cool|great|nice|fine|good|hmm+)[\s!.,?]*$", re.IGNORECASE),
+        "Great! Feel free to ask me anything about HR policies.",
+    ),
+    (
+        re.compile(r"^(who are you|what can you do|help|are you (there|working)|you there|test(ing)?)[\s!.,?]*$", re.IGNORECASE),
+        "I'm the JMR HR Assistant. I can answer questions about HR policies - leave, benefits, travel, insurance, code of conduct and more.",
+    ),
+]
+
+
+def _small_talk_reply(question: str) -> Optional[str]:
+    text = (question or '').strip()
+    if not text or len(text) > 60:
+        return None
+    for pattern, reply in _SMALL_TALK_PATTERNS:
+        if pattern.match(text):
+            return reply
+    return None
+
+
 def _format_validation_loc(location: tuple[object, ...]) -> str | None:
     parts = [str(part) for part in location if part != 'body']
     return '.'.join(parts) if parts else None
@@ -470,6 +509,18 @@ def create_app() -> FastAPI:
 
     @app.post("/api/query", response_class=StreamingResponse)
     async def query_handler(request: QueryRequest, background_tasks: BackgroundTasks):
+        small_talk = _small_talk_reply(request.question)
+        if small_talk is not None:
+            async def small_talk_stream():
+                yield json.dumps({"type": "start", "citations": []}).encode() + b"\n"
+                yield json.dumps({"type": "chunk", "content": small_talk}).encode() + b"\n"
+                yield json.dumps({"type": "end"}).encode() + b"\n"
+
+            return StreamingResponse(
+                small_talk_stream(),
+                media_type="application/x-ndjson"
+            )
+
         try:
             db = SessionLocal()
             rag_service = RAGService(db)

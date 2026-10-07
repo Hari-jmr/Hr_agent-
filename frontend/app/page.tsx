@@ -503,7 +503,14 @@ export default function ChatPage() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Backend error:', response.status, errorText);
-        throw new Error(`Query failed: ${response.status}`);
+        let detail = '';
+        try {
+          const parsed = JSON.parse(errorText);
+          detail = parsed.error || parsed.detail || '';
+        } catch {
+          detail = errorText;
+        }
+        throw new Error(detail || `Query failed: ${response.status}`);
       }
 
       const reader = response.body?.getReader();
@@ -542,12 +549,15 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error('Error:', error);
+      const detail = error instanceof Error && error.message ? error.message.slice(0, 300) : '';
       const errorMessages: ChatMessage[] = [
         ...nextMessages,
         {
           id: `msg_${Date.now()}`,
           role: 'assistant',
-          content: 'Sorry, I encountered an error processing your request. Please try again.',
+          content: detail
+            ? `Sorry, I couldn't process that. (${detail})`
+            : 'Sorry, I encountered an error processing your request. Please try again.',
           timestamp: new Date().toISOString(),
         },
       ];
