@@ -30,6 +30,7 @@ import numpy as np
 from backend.api.router import api_router
 from backend.core.config import config
 from backend.schemas.common import ErrorDetail, ErrorResponse, StatusResponse
+from backend.services.intent_router import CHAT, route as route_intent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -196,6 +197,51 @@ class OpenRouterClient:
                                 pass
 
 llm_client = OpenRouterClient(config.OPENROUTER_API_KEY)
+
+# ============================================================================
+# CONVERSATIONAL HELPERS
+# ============================================================================
+
+CHAT_SYSTEM_PROMPT = """You are the JMR HR Assistant at JMR Infotech, helping employees with HR topics.
+Keep replies short, warm and professional (1-3 sentences).
+For greetings and casual conversation, respond naturally and invite the user to ask an HR policy question.
+Never invent specific policy numbers or rules - concrete policy answers come from a document-retrieval step."""
+
+CONDENSE_SYSTEM_PROMPT = """You rewrite a follow-up HR question into one standalone search query.
+Use the conversation to resolve pronouns (it, they, this) and omitted context.
+Output ONLY the rewritten query itself - no quotes, no explanation, no preamble."""
+
+
+def _history_messages(
+    history: Optional[List[ChatMessage]],
+    question: str,
+    limit: int = 10,
+) -> List[dict]:
+    """Convert stored chat history into OpenAI-style messages.
+
+    The frontend sends the current question inside the history too, so the
+    trailing duplicate is dropped (the caller appends the question itself).
+    """
+    items = list(history or [])
+    if items and items[-1].role == 'user' and items[-1].content.strip() == question.strip():
+        items = items[:-1]
+    messages: List[dict] = []
+    for msg in items[-limit:]:
+        if msg.role in ('user', 'assistant') and msg.content.strip():
+            messages.append({"role": msg.role, "content": msg.content.strip()})
+    return messages
+
+
+async def _chat_stream(messages: List[dict]):
+    """Stream a conversational LLM reply using the same NDJSON protocol as RAG."""
+    yield json.dumps({"type": "start", "citations": []}).encode() + b"\n"
+    try:
+        async for delta in llm_client.stream_chat(messages, CHAT_SYSTEM_PROMPT):
+            yield json.dumps({"type": "chunk", "content": delta}).encode() + b"\n"
+    except Exception as exc:
+        logger.error(f"Chat stream error: {exc}")
+        yield json.dumps({"type": "error", "message": str(exc)}).encode() + b"\n"
+    yield json.dumps({"type": "end"}).encode() + b"\n"
 
 # ============================================================================
 # RAG PIPELINE SERVICES
@@ -369,7 +415,35 @@ class RAGService:
         context = "\n\n".join(context_parts)
         return context, citations
 
-    async def generate_answer_with_citations(self, query: str, context: str, citations: List[Citation]):
+    async def condense_query(self, query: str, history: Optional[List[ChatMessage]]) -> str:
+        """Rewrite a follow-up into a standalone question for retrieval (3b).
+
+        Falls back to the raw query when there is no history or when the
+        rewrite call fails, so condensing can never block an answer.
+        """
+        messages = _history_messages(history, query, limit=6)
+        if not messages:
+            return query
+        try:
+            parts = []
+            async for delta in llm_client.stream_chat(
+                [*messages, {"role": "user", "content": query}],
+                CONDENSE_SYSTEM_PROMPT
+            ):
+                parts.append(delta)
+            condensed = "".join(parts).strip().strip('"')
+            return condensed or query
+        except Exception as exc:
+            logger.warning(f"Query condensing failed, using raw question: {exc}")
+            return query
+
+    async def generate_answer_with_citations(
+        self,
+        query: str,
+        context: str,
+        citations: List[Citation],
+        history: Optional[List[ChatMessage]] = None
+    ):
         system_prompt = f"""You are an HR Policy Assistant. Answer the user's specific question using ONLY the provided policy excerpts. Be direct and concise.
 
 Rules:
@@ -380,17 +454,22 @@ Rules:
 5. Do NOT start with generic phrases like "According to the policy..." or "The document states that..." — jump straight to the facts.
 6. Use bullet points or numbered steps ONLY if the answer has multiple distinct items.
 7. Keep it brief. One or two sentences per point is enough.
+8. If the message is casual conversation (greeting, thanks, farewell) rather than a policy question, reply briefly and warmly without citing excerpts.
 
 Retrieved Policy Excerpts:
 {context}"""
 
-        messages = [{"role": "user", "content": query}]
+        messages = _history_messages(history, query) + [{"role": "user", "content": query}]
 
         async def answer_generator():
             yield json.dumps({"type": "start", "citations": [c.dict() for c in citations]}).encode() + b"\n"
 
-            async for chunk in llm_client.stream_chat(messages, system_prompt):
-                yield json.dumps({"type": "chunk", "content": chunk}).encode() + b"\n"
+            try:
+                async for chunk in llm_client.stream_chat(messages, system_prompt):
+                    yield json.dumps({"type": "chunk", "content": chunk}).encode() + b"\n"
+            except Exception as exc:
+                logger.error(f"Answer stream error: {exc}")
+                yield json.dumps({"type": "error", "message": str(exc)}).encode() + b"\n"
 
             yield json.dumps({"type": "end"}).encode() + b"\n"
 
@@ -399,44 +478,6 @@ Retrieved Policy Excerpts:
 # ============================================================================
 # APP FACTORY
 # ============================================================================
-
-_SMALL_TALK_PATTERNS = [
-    (
-        re.compile(r"^(hi+|hello+|hey+|yo|greetings|namaste|gm|good\s*(morning|afternoon|evening))[\s!.,?]*$", re.IGNORECASE),
-        "Hello! I'm the JMR HR Assistant. Ask me anything about HR policies - leave, benefits, travel, insurance and more.",
-    ),
-    (
-        re.compile(r"^(how\s*(are|r)\s*(you|u)|how are you doing|how's it going|whats up|what's up)[\s!.,?]*$", re.IGNORECASE),
-        "I'm doing well, thank you! How can I help you with HR policies today?",
-    ),
-    (
-        re.compile(r"^(thanks?|thank you|thx|ty|tysm)[\s!.,?]*$", re.IGNORECASE),
-        "You're welcome! Let me know if you have any other HR policy questions.",
-    ),
-    (
-        re.compile(r"^(bye+|goodbye|see you|see ya|cya)[\s!.,?]*$", re.IGNORECASE),
-        "Goodbye! Have a great day.",
-    ),
-    (
-        re.compile(r"^(ok|okay|k|cool|great|nice|fine|good|hmm+)[\s!.,?]*$", re.IGNORECASE),
-        "Great! Feel free to ask me anything about HR policies.",
-    ),
-    (
-        re.compile(r"^(who are you|what can you do|help|are you (there|working)|you there|test(ing)?)[\s!.,?]*$", re.IGNORECASE),
-        "I'm the JMR HR Assistant. I can answer questions about HR policies - leave, benefits, travel, insurance, code of conduct and more.",
-    ),
-]
-
-
-def _small_talk_reply(question: str) -> Optional[str]:
-    text = (question or '').strip()
-    if not text or len(text) > 60:
-        return None
-    for pattern, reply in _SMALL_TALK_PATTERNS:
-        if pattern.match(text):
-            return reply
-    return None
-
 
 def _format_validation_loc(location: tuple[object, ...]) -> str | None:
     parts = [str(part) for part in location if part != 'body']
@@ -509,15 +550,13 @@ def create_app() -> FastAPI:
 
     @app.post("/api/query", response_class=StreamingResponse)
     async def query_handler(request: QueryRequest, background_tasks: BackgroundTasks):
-        small_talk = _small_talk_reply(request.question)
-        if small_talk is not None:
-            async def small_talk_stream():
-                yield json.dumps({"type": "start", "citations": []}).encode() + b"\n"
-                yield json.dumps({"type": "chunk", "content": small_talk}).encode() + b"\n"
-                yield json.dumps({"type": "end"}).encode() + b"\n"
-
+        if route_intent(request.question) == CHAT:
+            chat_messages = _history_messages(
+                request.conversation_history,
+                request.question
+            ) + [{"role": "user", "content": request.question}]
             return StreamingResponse(
-                small_talk_stream(),
+                _chat_stream(chat_messages),
                 media_type="application/x-ndjson"
             )
 
@@ -525,8 +564,13 @@ def create_app() -> FastAPI:
             db = SessionLocal()
             rag_service = RAGService(db)
 
-            relevant_chunks = await rag_service.retrieve_relevant_chunks(
+            retrieval_query = await rag_service.condense_query(
                 request.question,
+                request.conversation_history
+            )
+
+            relevant_chunks = await rag_service.retrieve_relevant_chunks(
+                retrieval_query,
                 top_k=config.TOP_K_RETRIEVAL
             )
 
@@ -538,7 +582,8 @@ def create_app() -> FastAPI:
             answer_stream = await rag_service.generate_answer_with_citations(
                 request.question,
                 context,
-                citations
+                citations,
+                history=request.conversation_history
             )
 
             return StreamingResponse(

@@ -15,7 +15,7 @@ Employee login is verified against the existing Odoo PostgreSQL database.
 
 - **Frontend:** Next.js 15 (App Router), React 19, Tailwind CSS 4
 - **Backend:** FastAPI, SQLAlchemy, pgvector (1536-dim embeddings)
-- **LLM / embeddings:** OpenRouter (`openai/gpt-4o-mini`, `openai/text-embedding-3-small`)
+- **LLM / embeddings:** OpenRouter (`openai/gpt-6-luna`, `openai/text-embedding-3-small`)
 - **Auth:** Odoo 8.0 PostgreSQL (employee credentials + HR flag)
 - **Database:** PostgreSQL 15 + pgvector
 

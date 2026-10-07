@@ -24,7 +24,7 @@ Fill in `.env`:
 | `SECRET_KEY` | yes | long random string (session cookies) |
 | `ALLOWED_ORIGINS` | yes | e.g. `https://hr.your-domain.com` |
 | `DATABASE_URL` | no | overridden automatically inside compose |
-| `OPENROUTER_LLM_MODEL`, `OPENROUTER_EMBED_MODEL` | no | default `openai/gpt-4o-mini`, `openai/text-embedding-3-small` |
+| `OPENROUTER_LLM_MODEL`, `OPENROUTER_EMBED_MODEL` | no | default `openai/gpt-6-luna`, `openai/text-embedding-3-small` |
 | `CHUNK_SIZE`, `CHUNK_OVERLAP`, `TOP_K_RETRIEVAL`, `SIMILARITY_THRESHOLD` | no | RAG tuning |
 
 ## 3. Start the stack

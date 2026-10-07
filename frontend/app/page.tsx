@@ -541,6 +541,13 @@ export default function ChatPage() {
                 msg.id === assistantMessageId ? { ...msg, content: assistantContent, isStreaming: false, citations } : msg
               );
               persistMessages(final);
+            } else if (data.type === 'error') {
+              const reason = data.message ? ` (${String(data.message).slice(0, 160)})` : '';
+              assistantContent += (assistantContent ? '\n' : '') + `Sorry, I couldn't reach the AI service.${reason}`;
+              const failed = streamingMessages.map((msg) =>
+                msg.id === assistantMessageId ? { ...msg, content: assistantContent, isStreaming: false, citations } : msg
+              );
+              persistMessages(failed);
             }
           } catch {
             // Skip invalid JSON
