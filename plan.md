@@ -1,6 +1,6 @@
 # Plan: Replace HR Policy Index with `pdf2/` and Improve Grounded Answers
 
-**Status:** The application uses the built PDF2 index (15 documents / 280 chunks). Legacy tables are retained but not queried; evaluation and explicit deletion confirmation remain.
+**Status:** The application uses PDF2 (15 documents / 280 chunks). On 2026-10-26, the user explicitly requested legacy deletion; `documents` and `chunks` were removed after source validation and a verified backup. Startup no longer recreates them. Policy-version precedence and answer-quality evaluation remain open.
 
 ## Goal
 

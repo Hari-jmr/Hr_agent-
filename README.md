@@ -83,7 +83,7 @@ docker cp pdf2/. hr_agent_backend:/project/pdf2/
 docker exec hr_agent_backend python scripts/reingest.py --build-candidate
 ```
 
-The script preflights `pdf2/` and writes the replacement into separate PDF2 tables. The application uses those PDF2 tables; the previous `documents`/`chunks` index is retained but not queried. **Do not drop the legacy tables until the candidate passes evaluation and the user confirms deletion.** `seed-embeddings.py` is a compatibility alias for this staged workflow; it no longer incrementally mixes PDFs into the legacy index.
+The script preflights `pdf2/` and writes the replacement into the PDF2 tables used by the application. Backend startup creates only the PDF2 tables and conversation history; retired `documents`/`chunks` tables are not recreated. When migrating an older database, evaluate PDF2 and obtain explicit deletion approval plus a verified backup before removing its legacy index. `seed-embeddings.py` is a compatibility alias for this PDF2 workflow.
 
 ### Operations
 

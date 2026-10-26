@@ -3,10 +3,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { readNdjsonLines } from '@/lib/ndjson';
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  Bot,
   Link,
   ChevronDown,
   Check,
@@ -181,9 +181,6 @@ const AssistantMessage = ({ message, isStreaming }: { message: ChatMessage; isSt
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="break-words font-medium text-foreground/90">{citation.document_name}</p>
-                      <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
-                        {Math.round(citation.confidence_score * 100)}% match
-                      </span>
                     </div>
                     {citation.page_number && (
                       <p className="text-muted-foreground/60">Page {citation.page_number}</p>
@@ -577,7 +574,7 @@ export default function ChatPage() {
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center">
           <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-            <Bot className="size-6 text-muted-foreground" />
+            <ChatBubbleLeftRightIcon className="size-6 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
@@ -591,7 +588,7 @@ export default function ChatPage() {
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
-              <Bot className="size-7 text-primary" />
+              <ChatBubbleLeftRightIcon className="size-7 text-primary" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">JMR HR Portal</h1>
             <p className="mt-1 text-sm text-muted-foreground">Sign in with your Odoo credentials</p>
@@ -693,7 +690,7 @@ export default function ChatPage() {
                 </button>
               )}
               <div className="flex size-8 items-center justify-center rounded-full bg-primary/10">
-                <Bot className="size-4 text-primary" />
+                <ChatBubbleLeftRightIcon className="size-4 text-primary" />
               </div>
               <h1 className="text-sm font-semibold text-foreground">HR Agent Bot</h1>
             </div>
@@ -718,7 +715,7 @@ export default function ChatPage() {
               <div className="flex h-full flex-col items-center justify-center py-20">
                 <div className="text-center">
                   <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-                    <Bot className="size-6 text-muted-foreground" />
+                    <ChatBubbleLeftRightIcon className="size-6 text-muted-foreground" />
                   </div>
                   <h1 className="text-2xl font-medium text-foreground">What can I help with?</h1>
                   <p className="mt-2 text-sm text-muted-foreground">Ask about HR policies, leave, benefits, or procedures.</p>

@@ -41,7 +41,7 @@ This starts:
 | `hr_agent_backend` | `docker/Dockerfile.backend` | 8001 |
 | `hr_agent_frontend` | `docker/Dockerfile.frontend` | 3000 |
 
-Schema (`documents`, `chunks`, `conversation_history`) and the `vector` extension are created by the backend on startup (`backend/main.py` lifespan).
+The PDF2 schema (`documents_pdf2_stage`, `chunks_pdf2_stage`, `conversation_history`) and the `vector` extension are created by the backend on startup (`backend/main.py` lifespan). Retired legacy `documents`/`chunks` tables are not recreated.
 
 ## 4. Build/update the active PDF2 index
 
@@ -50,7 +50,7 @@ docker cp pdf2/. hr_agent_backend:/project/pdf2/
 docker exec hr_agent_backend python scripts/reingest.py --build-candidate
 ```
 
-The script preflights every PDF, extracts text/OCR content, and batch-embeds into the isolated PDF2 tables. `/api/query` and `/api/documents` use the PDF2 tables; legacy `documents`/`chunks` tables are retained but not queried. Keep a verified backup and do not delete the legacy tables until evaluation passes and the user explicitly confirms deletion. `seed-embeddings.py` is a compatibility alias for the staged PDF2 rebuild, not an incremental legacy-index seeder.
+The script preflights every PDF, extracts text/OCR content, and batch-embeds into the PDF2 tables. `/api/query` and `/api/documents` use only those tables. For older databases with legacy `documents`/`chunks` tables, evaluate PDF2 and obtain explicit deletion approval plus a verified backup before removing the legacy index. `seed-embeddings.py` is a compatibility alias for the PDF2 rebuild.
 
 Embeddings are generated through OpenRouter, so staging requires an API key with available account credit **and** remaining per-key spend limit.
 

@@ -1,6 +1,6 @@
 # Progress — PDF2 Grounded HR Chatbot
 
-**Status:** The application now uses the PDF2 index (15 documents / 280 chunks). The old index remains stored but is not used; delete it only after evaluation and explicit confirmation.
+**Status:** The application uses only PDF2 (15 documents / 280 chunks). On 2026-10-26, the user explicitly requested deletion of the legacy index; `documents` and `chunks` were removed after source validation and a verified backup. PDF2 and conversation history were preserved.
 **Last updated:** 2026-10-26
 
 ## Goal
@@ -8,6 +8,11 @@
 Replace the current indexed HR PDF corpus with the PDFs in `pdf2/` and improve the chatbot so it can answer indirect and situation-based questions from policy evidence, while clearly acknowledging missing, incomplete, or conflicting evidence.
 
 ## Work completed
+
+- Retired the legacy index on explicit user instruction (2026-10-26). Backup: `tmp/backups/legacy-index-2026-10-26.dump`, SHA256 `0ED737DC2218BA04114BE3EAE356115FDBAFDB9F090B8337E7D19F7586406332`. `pg_restore` decoded it successfully; its 14 document rows and 242 chunk rows were verified. Restore commands are in the adjacent `legacy-index-2026-10-26-restore.txt`.
+- Revalidated all 15 PDF2 sources (280 chunks), matched their content-derived IDs against the active inventory, and checked 1,536-dimensional non-null embeddings. The deletion transaction verified hashes of every PDF2 and conversation-history row before committing; only legacy `documents` and `chunks` were dropped, without CASCADE.
+- Limited backend startup schema creation to PDF2 plus conversation history so the retired tables cannot return on restart. Added a startup regression test; all 29 backend tests pass.
+- Replaced the bot symbol with Heroicons `ChatBubbleLeftRightIcon` and removed percentage-match badges from sources. Frontend type checking and the production build passed. Both Docker services were rebuilt/restarted; live HTML/assets confirm the new icon, retained sources panel and absent match badge. Backend health and PDF2 inventory passed after restart, and the legacy tables stayed absent.
 
 - Inspected the current backend RAG flow, configuration, intent router, ingestion scripts, deployment guidance, and existing question sets.
 - Audited the greeting/chat/policy route and recorded when DB, embedding, and vector retrieval are skipped versus invoked.
@@ -44,7 +49,7 @@ Replace the current indexed HR PDF corpus with the PDFs in `pdf2/` and improve t
 
 ## Open decisions — resolve before dependent work
 
-1. **Replacement scope:** Recommended: delete only indexed `documents`/`chunks` for the old corpus; retain source files, conversation history, schema, and the database volume. Confirm this before the index replacement.
+1. **Replacement scope resolved (2026-10-26):** The user explicitly requested old-index deletion. Removed only legacy `documents`/`chunks` after a verified backup; retained PDFs, conversation history, PDF2 tables, unrelated schema/data, and the database volume.
 2. **Parental policy:** Is the absence of the Parental Policy Handbook from `pdf2/` intentional? If yes, answers that depend only on that document must be unavailable until it is added to the approved corpus.
 3. **PDF upload endpoint:** Should manual uploads remain an allowed source outside `pdf2/`, or should the indexed corpus be restricted to `pdf2/` only? Recommended for this task: `pdf2/` is the sole bulk/replacement corpus; decide whether to disable/restrict uploads or explicitly leave them as a separate permitted source.
 4. **Scenario answers:** Recommended: apply documented rules to the facts in a scenario, with citations; ask a focused follow-up if a material fact is missing; do not make unsupported HR judgments. Confirm if a stricter “quote rules only” style is preferred.
@@ -60,26 +65,32 @@ Replace the current indexed HR PDF corpus with the PDFs in `pdf2/` and improve t
 - [x] Resolve local dotenv precedence and build the 280-chunk PDF2 index in separate tables.
 - [x] Switch app query/document-list paths to PDF2 only; keep legacy tables stored and unused.
 - [ ] Evaluate the active PDF2 index against the supplied questions.
-- [ ] Show evaluation/source-conflict results and wait for explicit confirmation before deleting the legacy index.
+- [x] User explicitly requested legacy deletion on 2026-10-26; validated sources, verified the backup, and removed only the legacy index. Source-conflict/answer-quality evaluation remains a separate open task.
 - [ ] Improve retrieval and grounding for paraphrased, multi-part, and situation-based questions.
 - [x] Remove hard-coded greeting phrases and implement model-assisted CHAT/RETRIEVE routing with safe invalid-output fallback.
 - [x] Verify through query-handler tests that CHAT replies skip DB/retrieval while RETRIEVE questions run RAG.
 - [x] Add deterministic no-chunk abstention and inline source citation instructions.
 - [ ] Run tests and the agreed evaluation set; fix failures and repeat relevant checks.
-- [ ] Verify indexed document inventory and counts against the approved `pdf2/` corpus.
+- [x] Verify indexed document inventory and counts against the approved `pdf2/` corpus (15 documents / 280 chunks; source hashes match).
 - [ ] Update user-facing setup/deployment instructions and this progress file with actual results.
 
 ## Current next action
 
-Run retrieval/evaluation against the active PDF2 tables. Resolve policy-version precedence before legacy cleanup; after results are reviewed, wait for explicit confirmation before deleting legacy.
+The requested UI changes and legacy-index cleanup are complete and verified in Docker. Policy-version precedence and answer-quality evaluation remain separate open tasks; no legacy cleanup or rollout work remains.
 
 ## Retrieval table map
 
 - Current production `/api/query`: `RAGService(db)` → `chunks_pdf2_stage` + `documents_pdf2_stage` (PDF2, 15 documents / 280 chunks).
-- Legacy, not queried: `chunks` + `documents` (14 documents / 242 chunks).
-- After evaluation and explicit confirmation: back up and delete only the legacy tables. No dual-corpus retrieval or table rename is needed.
+- Legacy `chunks` + `documents`: deleted on explicit user request; a verified local archive retains the former 14 documents / 242 chunks.
+- Startup creates only PDF2 and conversation history. No dual-corpus retrieval or table rename is needed.
 
 ## Verification log
+
+- Docker rollout completed: backend healthy; live frontend serves the Heroicons chat SVG and sources panel without `% match`; PDF2 remains 15 documents / 280 chunks. After backend restart, `to_regclass('public.documents')` and `to_regclass('public.chunks')` are NULL. `git diff --check` passed.
+
+- 2026-10-26 retirement checks: source preflight passed for 15 PDFs / 280 chunks; indexed IDs match source hashes; the legacy archive contains 14 documents / 242 chunks. Transactional deletion preserved PDF2/history hashes and confirmed both legacy tables are absent.
+- `scripts/evaluate_staged_index.py` ran against PDF2 for all 110 prompts. Expected-source checks passed for 8 categorized probation questions; 102 prompts were uncategorized and therefore had no meaningful expected-source assertion. This diagnostic does not establish answer accuracy or resolve source conflicts.
+- `python -m pytest -o addopts= backend/tests -q`: **29 passed**; frontend type checking passed after adding Heroicons and removing source match percentages.
 
 - Pre-commit verification (2026-10-26): **28 backend tests passed**, **2 frontend stream tests passed**, and frontend TypeScript checking passed. The backend tests required a rerun outside the sandbox to access pytest's temporary directory. Added generated `.coverage` files to `.gitignore`.
 

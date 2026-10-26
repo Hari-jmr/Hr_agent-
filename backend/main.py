@@ -85,7 +85,7 @@ class Chunk(Base):
 
 
 class StagedDocument(Base):
-    """Candidate PDF2 corpus kept separate from the active legacy index."""
+    """Active PDF2 policy documents."""
 
     __tablename__ = "documents_pdf2_stage"
 
@@ -99,7 +99,7 @@ class StagedDocument(Base):
 
 
 class StagedChunk(Base):
-    """Candidate chunks; active retrieval never reads this table pre-promotion."""
+    """Active PDF2 policy chunks."""
 
     __tablename__ = "chunks_pdf2_stage"
 
@@ -838,7 +838,16 @@ async def lifespan(app: FastAPI):
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     except Exception as exc:  # pragma: no cover - depends on DB privileges
         logger.warning("Could not ensure pgvector extension: %s", exc)
-    Base.metadata.create_all(bind=engine)
+    # Legacy models remain available for archive compatibility, but startup
+    # must not recreate the retired documents/chunks tables.
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[
+            StagedDocument.__table__,
+            StagedChunk.__table__,
+            ConversationHistory.__table__,
+        ],
+    )
     logger.info("Database initialized")
     yield
     logger.info("HR Agent API shutting down")
