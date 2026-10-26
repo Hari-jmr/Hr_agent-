@@ -27,10 +27,29 @@ frontend/    Next.js app (app/, components/, lib/)
 docker/      Dockerfile.backend, Dockerfile.frontend, docker-compose.yml
 scripts/     init-db.sh, seed-embeddings.py, reingest.py, test-query.py
 docs/        Architecture, API and deployment notes
-pdfs/        HR policy PDFs to ingest (not committed)
+pdf2/        Active HR policy PDF corpus (not committed)
 ```
 
-## Deploy with Docker (recommended)
+## Run locally on Windows
+
+Use the existing PostgreSQL database from `backend/.env` and the OpenRouter key configured there. The backend now reads `backend/.env` before the root `.env` for local development.
+
+From the repository root, start the backend in one PowerShell terminal:
+
+```powershell
+& ".\backend\.venv\Scripts\python.exe" -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8001
+```
+
+In a second terminal, start the frontend:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Open http://localhost:3000. Backend API docs are at http://localhost:8001/docs.
+
+## Deploy with Docker
 
 Prerequisites: Docker + Docker Compose on the server, an OpenRouter API key, network access to the Odoo PostgreSQL host, and the policy PDFs.
 
@@ -57,14 +76,14 @@ Access:
 
 The database schema and the `vector` extension are created automatically on backend startup.
 
-### Ingest the policy PDFs
+### Build/update the PDF2 index
 
 ```bash
-docker cp pdfs/. hr_agent_backend:/project/pdfs/
-docker exec hr_agent_backend python scripts/reingest.py
+docker cp pdf2/. hr_agent_backend:/project/pdf2/
+docker exec hr_agent_backend python scripts/reingest.py --build-candidate
 ```
 
-`reingest.py` clears and re-embeds every PDF in `pdfs/`. Use `seed-embeddings.py` to ingest without clearing (it skips files already ingested).
+The script preflights `pdf2/` and writes the replacement into separate PDF2 tables. The application uses those PDF2 tables; the previous `documents`/`chunks` index is retained but not queried. **Do not drop the legacy tables until the candidate passes evaluation and the user confirms deletion.** `seed-embeddings.py` is a compatibility alias for this staged workflow; it no longer incrementally mixes PDFs into the legacy index.
 
 ### Operations
 

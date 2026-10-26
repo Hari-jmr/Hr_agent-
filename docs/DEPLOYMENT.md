@@ -43,16 +43,16 @@ This starts:
 
 Schema (`documents`, `chunks`, `conversation_history`) and the `vector` extension are created by the backend on startup (`backend/main.py` lifespan).
 
-## 4. Ingest policy PDFs
+## 4. Build/update the active PDF2 index
 
 ```bash
-docker cp pdfs/. hr_agent_backend:/project/pdfs/
-docker exec hr_agent_backend python scripts/reingest.py       # clears + re-embeds all PDFs
-# or, incremental (skips already ingested files):
-docker exec hr_agent_backend python scripts/seed-embeddings.py --pdf-dir /project/pdfs
+docker cp pdf2/. hr_agent_backend:/project/pdf2/
+docker exec hr_agent_backend python scripts/reingest.py --build-candidate
 ```
 
-Embeddings are generated through OpenRouter, so ingestion requires a valid `OPENROUTER_API_KEY`.
+The script preflights every PDF, extracts text/OCR content, and batch-embeds into the isolated PDF2 tables. `/api/query` and `/api/documents` use the PDF2 tables; legacy `documents`/`chunks` tables are retained but not queried. Keep a verified backup and do not delete the legacy tables until evaluation passes and the user explicitly confirms deletion. `seed-embeddings.py` is a compatibility alias for the staged PDF2 rebuild, not an incremental legacy-index seeder.
+
+Embeddings are generated through OpenRouter, so staging requires an API key with available account credit **and** remaining per-key spend limit.
 
 ## 5. Verify
 

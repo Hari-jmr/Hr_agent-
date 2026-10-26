@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { readNdjsonLines } from '@/lib/ndjson';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -156,12 +157,14 @@ const AssistantMessage = ({ message, isStreaming }: { message: ChatMessage; isSt
         ) : null}
       </div>
 
-      {/* Citations / Sources - hidden from UI for now; keep logic commented out
+      {/* Policy source documents and page references */}
       {message.citations && message.citations.length > 0 && !isStreaming && (
         <div className="mt-3">
           <button
             type="button"
             onClick={() => setSourcesOpen((prev) => !prev)}
+            aria-expanded={sourcesOpen}
+            aria-controls={`${message.id}-sources`}
             className="flex items-center gap-1.5 text-xs text-muted-foreground/70 transition-colors hover:text-muted-foreground"
           >
             <Link className="size-3.5" />
@@ -169,15 +172,15 @@ const AssistantMessage = ({ message, isStreaming }: { message: ChatMessage; isSt
             <ChevronDown className={cn('size-3 transition-transform', sourcesOpen && 'rotate-180')} />
           </button>
           {sourcesOpen && (
-            <div className="mt-2 space-y-1.5 rounded-lg border border-border/40 bg-muted/20 p-3">
+            <div id={`${message.id}-sources`} role="region" aria-label="Policy sources" className="mt-2 space-y-1.5 rounded-lg border border-border/40 bg-muted/20 p-3">
               {message.citations.map((citation, i) => (
-                <div key={i} className="flex items-start gap-2 rounded-md px-2 py-1.5 text-xs">
+                <div key={citation.chunk_id} className="flex items-start gap-2 rounded-md px-2 py-1.5 text-xs">
                   <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate font-medium text-foreground/90">{citation.document_name}</p>
+                      <p className="break-words font-medium text-foreground/90">{citation.document_name}</p>
                       <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
                         {Math.round(citation.confidence_score * 100)}% match
                       </span>
@@ -193,7 +196,6 @@ const AssistantMessage = ({ message, isStreaming }: { message: ChatMessage; isSt
           )}
         </div>
       )}
-      */}
 
       {/* Actions */}
       {!isStreaming && timestamp && (
@@ -514,19 +516,9 @@ export default function ChatPage() {
         throw new Error(detail || `Query failed: ${response.status}`);
       }
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+      if (!response.body) throw new Error('No response body');
 
-      if (!reader) throw new Error('No reader');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const text = decoder.decode(value, { stream: true });
-        const lines = text.split('\n').filter((line) => line.trim());
-
-        for (const line of lines) {
+      for await (const line of readNdjsonLines(response.body)) {
           try {
             const data = JSON.parse(line);
             if (data.type === 'start') {
@@ -553,7 +545,6 @@ export default function ChatPage() {
           } catch {
             // Skip invalid JSON
           }
-        }
       }
     } catch (error) {
       console.error('Error:', error);

@@ -25,10 +25,14 @@ dist-test/
 idea/
 *.swp
 
-# Markdown (scratch notes only - README and docs/ are tracked)
+# Markdown (scratch notes only - README and docs/ are tracked, except active work plans)
 *.md
 !README.md
 !docs/*.md
+!/agent.md
+!/plan.md
+!/progress.md
+!/loop.md
 
 # Office documents
 *.docx
@@ -36,6 +40,10 @@ idea/
 # TypeScript build artifacts
 *.tsbuildinfo
 next-env.d.ts
+
+# Python coverage artifacts
+.coverage
+.coverage.*
 
 # OS
 .DS_Store
